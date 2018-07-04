@@ -747,7 +747,7 @@ CURLcode Curl_disconnect(struct connectdata *conn, bool dead_connection)
   data = conn->data;
 
   if(!data) {
-    DEBUGF(fprintf(stderr, "DISCONNECT without easy handle, ignoring\n"));
+    fprintf(stderr, "DISCONNECT without easy handle, ignoring\n");
     return CURLE_OK;
   }
 
@@ -756,8 +756,8 @@ CURLcode Curl_disconnect(struct connectdata *conn, bool dead_connection)
    * are other users of it
    */
   if(!conn->bits.close && !CONN_INUSE(conn)) {
-    DEBUGF(fprintf(stderr, "Curl_disconnect when inuse: %d\n",
-                   CONN_INUSE(conn)));
+    fprintf(stderr, "Curl_disconnect when inuse: %d\n",
+            CONN_INUSE(conn));
     return CURLE_OK;
   }
 
@@ -796,6 +796,7 @@ CURLcode Curl_disconnect(struct connectdata *conn, bool dead_connection)
 
   conn_free(conn);
 
+  fprintf(stderr, "Curl_disconnected!\n");
   return CURLE_OK;
 }
 
@@ -913,7 +914,6 @@ void Curl_getoff_all_pipelines(struct Curl_easy *data,
     int rc;
     rc = Curl_removeHandleFromPipeline(data, &conn->recv_pipe);
     rc += Curl_removeHandleFromPipeline(data, &conn->send_pipe);
-    fprintf(stderr, "%s:%d %s == %d\n", __FILE__, __LINE__, __func__, rc);
   }
 }
 
