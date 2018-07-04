@@ -795,8 +795,6 @@ CURLcode Curl_disconnect(struct connectdata *conn, bool dead_connection)
   }
 
   conn_free(conn);
-
-  fprintf(stderr, "Curl_disconnected!\n");
   return CURLE_OK;
 }
 

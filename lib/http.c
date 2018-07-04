@@ -1543,6 +1543,11 @@ CURLcode Curl_http_done(struct connectdata *conn,
   conn->seek_func = data->set.seek_func; /* restore */
   conn->seek_client = data->set.seek_client; /* restore */
 
+  if(status == CURLE_OPERATION_TIMEDOUT) {
+    fprintf(stderr, "%s: timed out handle %p http %p\n",
+            __func__, data, http);
+  }
+
   if(!http)
     return CURLE_OK;
 
@@ -1913,6 +1918,7 @@ CURLcode Curl_http(struct connectdata *conn, bool *done)
   }
 
   http = data->req.protop;
+  DEBUGASSERT(http);
 
   if(!data->state.this_is_a_follow) {
     /* Free to avoid leaking memory on multiple requests*/

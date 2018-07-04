@@ -165,6 +165,7 @@ static CURLcode http2_disconnect(struct connectdata *conn,
   nghttp2_session_del(c->h2);
   Curl_safefree(c->inbuf);
   http2_stream_free(conn->data->req.protop);
+  conn->data->req.protop = NULL;
   conn->data->state.drain = 0;
 
   H2BUGF(infof(conn->data, "HTTP/2 DISCONNECT done\n"));
@@ -520,6 +521,7 @@ static int push_promise(struct Curl_easy *data,
     if(rv) {
       /* denied, kill off the new handle again */
       http2_stream_free(newhandle->req.protop);
+      newhandle->req.protop = NULL;
       (void)Curl_close(newhandle);
       goto fail;
     }
@@ -535,6 +537,7 @@ static int push_promise(struct Curl_easy *data,
     if(rc) {
       infof(data, "failed to add handle to multi\n");
       http2_stream_free(newhandle->req.protop);
+      newhandle->req.protop = NULL;
       Curl_close(newhandle);
       rv = 1;
       goto fail;
@@ -543,6 +546,8 @@ static int push_promise(struct Curl_easy *data,
     httpc = &conn->proto.httpc;
     nghttp2_session_set_stream_user_data(httpc->h2,
                                          frame->promised_stream_id, newhandle);
+    fprintf(stderr, "%s: stream id %u == handle %p set\n",
+            __func__, frame->promised_stream_id, newhandle);
   }
   else {
     H2BUGF(infof(data, "Got PUSH_PROMISE, ignore it!\n"));
@@ -847,6 +852,8 @@ static int on_stream_close(nghttp2_session *session, int32_t stream_id,
 
     /* remove the entry from the hash as the stream is now gone */
     nghttp2_session_set_stream_user_data(session, stream_id, 0);
+    fprintf(stderr, "%s: stream id %u handle %p cleared session %p\n",
+            __func__, stream_id, data_s, session);
     H2BUGF(infof(data_s, "Removed stream %u hash!\n", stream_id));
   }
   return 0;
@@ -1135,6 +1142,8 @@ void Curl_http2_done(struct connectdata *conn, bool premature)
   }
   if(http->stream_id) {
     nghttp2_session_set_stream_user_data(httpc->h2, http->stream_id, 0);
+    fprintf(stderr, "%s: stream id %u handle %p cleared2 session %p\n",
+            __func__, http->stream_id, data, httpc->h2);
     http->stream_id = 0;
   }
 }
@@ -1779,7 +1788,8 @@ static ssize_t http2_send(struct connectdata *conn, int sockindex,
    */
   int rv;
   struct http_conn *httpc = &conn->proto.httpc;
-  struct HTTP *stream = conn->data->req.protop;
+  struct Curl_easy *data = conn->data;
+  struct HTTP *stream = data->req.protop;
   nghttp2_nv *nva = NULL;
   size_t nheader;
   size_t i;
@@ -1793,23 +1803,23 @@ static ssize_t http2_send(struct connectdata *conn, int sockindex,
 
   (void)sockindex;
 
-  H2BUGF(infof(conn->data, "http2_send len=%zu\n", len));
+  H2BUGF(infof(data, "http2_send len=%zu\n", len));
 
   if(stream->stream_id != -1) {
     if(stream->close_handled) {
-      infof(conn->data, "stream %d closed\n", stream->stream_id);
+      infof(data, "stream %d closed\n", stream->stream_id);
       *err = CURLE_HTTP2_STREAM;
       return -1;
     }
     else if(stream->closed) {
-      return http2_handle_stream_close(conn, conn->data, stream, err);
+      return http2_handle_stream_close(conn, data, stream, err);
     }
     /* If stream_id != -1, we have dispatched request HEADERS, and now
        are going to send or sending request body in DATA frame */
     stream->upload_mem = mem;
     stream->upload_len = len;
     nghttp2_session_resume_data(h2, stream->stream_id);
-    rv = h2_session_send(conn->data, h2);
+    rv = h2_session_send(data, h2);
     if(nghttp2_is_fatal(rv)) {
       *err = CURLE_SEND_ERROR;
       return -1;
@@ -1822,7 +1832,7 @@ static ssize_t http2_send(struct connectdata *conn, int sockindex,
     stream->upload_len = 0;
 
     if(should_close_session(httpc)) {
-      H2BUGF(infof(conn->data, "http2_send: nothing to do in this session\n"));
+      H2BUGF(infof(data, "http2_send: nothing to do in this session\n"));
       *err = CURLE_HTTP2;
       return -1;
     }
@@ -1835,7 +1845,7 @@ static ssize_t http2_send(struct connectdata *conn, int sockindex,
       nghttp2_session_resume_data(h2, stream->stream_id);
     }
 
-    H2BUGF(infof(conn->data, "http2_send returns %zu for stream %u\n", len,
+    H2BUGF(infof(data, "http2_send returns %zu for stream %u\n", len,
                  stream->stream_id));
     return len;
   }
@@ -1879,7 +1889,7 @@ static ssize_t http2_send(struct connectdata *conn, int sockindex,
   nva[0].valuelen = (size_t)(end - hdbuf);
   nva[0].flags = NGHTTP2_NV_FLAG_NONE;
   if(HEADER_OVERFLOW(nva[0])) {
-    failf(conn->data, "Failed sending HTTP request: Header overflow");
+    failf(data, "Failed sending HTTP request: Header overflow");
     goto fail;
   }
 
@@ -1901,7 +1911,7 @@ static ssize_t http2_send(struct connectdata *conn, int sockindex,
   nva[1].valuelen = (size_t)(end - hdbuf);
   nva[1].flags = NGHTTP2_NV_FLAG_NONE;
   if(HEADER_OVERFLOW(nva[1])) {
-    failf(conn->data, "Failed sending HTTP request: Header overflow");
+    failf(data, "Failed sending HTTP request: Header overflow");
     goto fail;
   }
 
@@ -1914,7 +1924,7 @@ static ssize_t http2_send(struct connectdata *conn, int sockindex,
   nva[2].valuelen = strlen((char *)nva[2].value);
   nva[2].flags = NGHTTP2_NV_FLAG_NONE;
   if(HEADER_OVERFLOW(nva[2])) {
-    failf(conn->data, "Failed sending HTTP request: Header overflow");
+    failf(data, "Failed sending HTTP request: Header overflow");
     goto fail;
   }
 
@@ -1972,7 +1982,7 @@ static ssize_t http2_send(struct connectdata *conn, int sockindex,
 
     nva[i].flags = NGHTTP2_NV_FLAG_NONE;
     if(HEADER_OVERFLOW(nva[i])) {
-      failf(conn->data, "Failed sending HTTP request: Header overflow");
+      failf(data, "Failed sending HTTP request: Header overflow");
       goto fail;
     }
     ++i;
@@ -1996,27 +2006,27 @@ static ssize_t http2_send(struct connectdata *conn, int sockindex,
     for(i = 0; i < nheader; ++i) {
       acc += nva[i].namelen + nva[i].valuelen;
 
-      H2BUGF(infof(conn->data, "h2 header: %.*s:%.*s\n",
+      H2BUGF(infof(data, "h2 header: %.*s:%.*s\n",
                    nva[i].namelen, nva[i].name,
                    nva[i].valuelen, nva[i].value));
     }
 
     if(acc > MAX_ACC) {
-      infof(conn->data, "http2_send: Warning: The cumulative length of all "
+      infof(data, "http2_send: Warning: The cumulative length of all "
             "headers exceeds %zu bytes and that could cause the "
             "stream to be rejected.\n", MAX_ACC);
     }
   }
 
-  h2_pri_spec(conn->data, &pri_spec);
+  h2_pri_spec(data, &pri_spec);
 
-  switch(conn->data->set.httpreq) {
+  switch(data->set.httpreq) {
   case HTTPREQ_POST:
   case HTTPREQ_POST_FORM:
   case HTTPREQ_POST_MIME:
   case HTTPREQ_PUT:
-    if(conn->data->state.infilesize != -1)
-      stream->upload_left = conn->data->state.infilesize;
+    if(data->state.infilesize != -1)
+      stream->upload_left = data->state.infilesize;
     else
       /* data sending without specifying the data amount up front */
       stream->upload_left = -1; /* unknown, but not zero */
@@ -2024,23 +2034,25 @@ static ssize_t http2_send(struct connectdata *conn, int sockindex,
     data_prd.read_callback = data_source_read_callback;
     data_prd.source.ptr = NULL;
     stream_id = nghttp2_submit_request(h2, &pri_spec, nva, nheader,
-                                       &data_prd, conn->data);
+                                       &data_prd, data);
     break;
   default:
     stream_id = nghttp2_submit_request(h2, &pri_spec, nva, nheader,
-                                       NULL, conn->data);
+                                       NULL, data);
   }
+  fprintf(stderr, "%s:%d stream id %u == handle %p set session %p\n",
+          __FILE__, __LINE__, stream_id, data, h2);
 
   Curl_safefree(nva);
 
   if(stream_id < 0) {
-    H2BUGF(infof(conn->data, "http2_send() send error\n"));
+    H2BUGF(infof(data, "http2_send() send error\n"));
     *err = CURLE_SEND_ERROR;
     return -1;
   }
 
-  infof(conn->data, "Using Stream ID: %x (easy handle %p)\n",
-        stream_id, (void *)conn->data);
+  infof(data, "Using Stream ID: %x (easy handle %p)\n",
+        stream_id, data);
   stream->stream_id = stream_id;
 
   /* this does not call h2_session_send() since there can not have been any
@@ -2053,7 +2065,7 @@ static ssize_t http2_send(struct connectdata *conn, int sockindex,
   }
 
   if(should_close_session(httpc)) {
-    H2BUGF(infof(conn->data, "http2_send: nothing to do in this session\n"));
+    H2BUGF(infof(data, "http2_send: nothing to do in this session\n"));
     *err = CURLE_HTTP2;
     return -1;
   }
@@ -2157,6 +2169,8 @@ CURLcode Curl_http2_switched(struct connectdata *conn,
     nghttp2_session_set_stream_user_data(httpc->h2,
                                          stream->stream_id,
                                          conn->data);
+    fprintf(stderr, "%s: stream id %u == handle %p set\n",
+            __func__, stream->stream_id, conn->data);
   }
   else {
     populate_settings(conn, httpc);
