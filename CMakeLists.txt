@@ -75,7 +75,7 @@ include_directories( ${CURL_SOURCE_DIR}/include )
 
 option(CURL_WERROR "Turn compiler warnings into errors" OFF)
 option(PICKY_COMPILER "Enable picky compiler options" ON)
-option(BUILD_CURL_EXE "Set to ON to build curl executable." ON)
+option(BUILD_CURL_EXE "Set to ON to build curl executable." OFF)
 option(CURL_STATICLIB "Set to ON to build libcurl with static linking." OFF)
 option(ENABLE_ARES "Set to ON to enable c-ares support" OFF)
 if(WIN32)
@@ -115,11 +115,6 @@ endif()
 
 if (ENABLE_CURLDEBUG)
   set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS CURLDEBUG)
-endif()
-
-# For debug libs and exes, add "-d" postfix
-if(NOT DEFINED CMAKE_DEBUG_POSTFIX)
-  set(CMAKE_DEBUG_POSTFIX "-d")
 endif()
 
 # initialize CURL_LIBS
@@ -297,7 +292,7 @@ if(APPLE)
   option(CMAKE_USE_DARWINSSL "enable Apple OS native SSL/TLS" OFF)
 endif()
 if(WIN32)
-  option(CMAKE_USE_WINSSL "enable Windows native SSL/TLS" OFF)
+  option(CMAKE_USE_WINSSL "enable Windows native SSL/TLS" ON)
   cmake_dependent_option(CURL_WINDOWS_SSPI "Use windows libraries to allow NTLM authentication without openssl" ON
     CMAKE_USE_WINSSL OFF)
 endif()
@@ -1163,7 +1158,7 @@ if(BUILD_CURL_EXE)
   add_subdirectory(src)
 endif()
 
-include(CTest)
+#include(CTest)
 if(BUILD_TESTING)
   add_subdirectory(tests)
 endif()

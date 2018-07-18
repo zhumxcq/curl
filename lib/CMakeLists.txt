@@ -94,13 +94,6 @@ endif()
 set_target_properties(${LIB_NAME} PROPERTIES PREFIX "")
 set_target_properties(${LIB_NAME} PROPERTIES IMPORT_PREFIX "")
 
-if(WIN32)
-  if(NOT CURL_STATICLIB)
-    # Add "_imp" as a suffix before the extension to avoid conflicting with the statically linked "libcurl.lib"
-    set_target_properties(${LIB_NAME} PROPERTIES IMPORT_SUFFIX "_imp.lib")
-  endif()
-endif()
-
 target_include_directories(${LIB_NAME} INTERFACE
 	$<INSTALL_INTERFACE:include>)
 
