@@ -1275,18 +1275,18 @@ set(VERSIONNUM              "${CURL_VERSION_NUM}")
 # Finally generate a "curl-config" matching this config
 configure_file("${CURL_SOURCE_DIR}/curl-config.in"
                "${CURL_BINARY_DIR}/curl-config" @ONLY)
-install(FILES "${CURL_BINARY_DIR}/curl-config"
-        DESTINATION bin
-        PERMISSIONS
-          OWNER_READ OWNER_WRITE OWNER_EXECUTE
-          GROUP_READ GROUP_EXECUTE
-          WORLD_READ WORLD_EXECUTE)
+#install(FILES "${CURL_BINARY_DIR}/curl-config"
+#        DESTINATION bin
+#        PERMISSIONS
+#          OWNER_READ OWNER_WRITE OWNER_EXECUTE
+#          GROUP_READ GROUP_EXECUTE
+#          WORLD_READ WORLD_EXECUTE)
 
 # Finally generate a pkg-config file matching this config
 configure_file("${CURL_SOURCE_DIR}/libcurl.pc.in"
                "${CURL_BINARY_DIR}/libcurl.pc" @ONLY)
-install(FILES "${CURL_BINARY_DIR}/libcurl.pc"
-        DESTINATION lib/pkgconfig)
+#install(FILES "${CURL_BINARY_DIR}/libcurl.pc"
+        #DESTINATION lib/pkgconfig)
 
 # This needs to be run very last so other parts of the scripts can take advantage of this.
 if(NOT CURL_CONFIG_HAS_BEEN_RUN_BEFORE)
@@ -1294,9 +1294,9 @@ if(NOT CURL_CONFIG_HAS_BEEN_RUN_BEFORE)
 endif()
 
 # install headers
-install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/curl"
-    DESTINATION include
-    FILES_MATCHING PATTERN "*.h")
+#install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/curl"
+#    DESTINATION include
+#    FILES_MATCHING PATTERN "*.h")
 
 
 include(CMakePackageConfigHelpers)
@@ -1311,11 +1311,11 @@ configure_file(CMake/curl-config.cmake
         COPYONLY
 )
 
-install(
-        FILES ${PROJECT_BINARY_DIR}/curl-config.cmake
-              ${PROJECT_BINARY_DIR}/curl-config-version.cmake
-        DESTINATION ${CURL_INSTALL_CMAKE_DIR}
-)
+#install(
+#        FILES ${PROJECT_BINARY_DIR}/curl-config.cmake
+#              ${PROJECT_BINARY_DIR}/curl-config-version.cmake
+#        DESTINATION ${CURL_INSTALL_CMAKE_DIR}
+#)
 
 # Workaround for MSVS10 to avoid the Dialog Hell
 # FIXME: This could be removed with future version of CMake.
