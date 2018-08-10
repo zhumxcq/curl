@@ -97,13 +97,23 @@ set_target_properties(${LIB_NAME} PROPERTIES IMPORT_PREFIX "")
 target_include_directories(${LIB_NAME} INTERFACE
 	$<INSTALL_INTERFACE:include>)
 
-IF(WIN32)
-install(TARGETS ${LIB_NAME}
-  EXPORT libcurl-target
+#IF(WIN32)
+#install(TARGETS ${LIB_NAME}
+#  EXPORT libcurl-target
 #  ARCHIVE DESTINATION lib
 #  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-)
+#  RUNTIME DESTINATION bin
+#)
+#ENDIF()
+
+IF(WIN32)
+install(TARGETS ${LIB_NAME}
+    RUNTIME DESTINATION bin
+        COMPONENT libraries)
+ELSE()
+install(TARGETS ${LIB_NAME}
+	LIBRARY DESTINATION lib
+	COMPONENT libraries)
 ENDIF()
 
 export(TARGETS ${LIB_NAME}
